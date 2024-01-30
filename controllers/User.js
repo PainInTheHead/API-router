@@ -3,10 +3,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 exports.userRegister = async (req, res) => {
+  try {
   const validNewUser = await User.findOne({ email: req.body.email });
   if (validNewUser) {
-    res.sendStatus(409).json({ message: "not Valid email, try again :(" });
-    console.log("Beda");
+    return res.status(409).json({ message: "not Valid email, try again :(" });
   }
   const salt = bcrypt.genSaltSync(10);
   const password = req.body.password;
@@ -14,11 +14,11 @@ exports.userRegister = async (req, res) => {
     email: req.body.email,
     password: bcrypt.hashSync(password, salt),
   });
-  try {
     await user.save().then(() => console.log("User created"));
     res.status(201).json(user);
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    res.status(404).json({ message: "Такой парень уже создан" })
   }
 };
 

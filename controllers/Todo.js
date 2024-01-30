@@ -1,7 +1,5 @@
 const Todo = require("./../models/Todo");
 
-
-
 exports.getTodos = async (req, res) => {
   try {
     const id = req.user.id;
@@ -12,8 +10,6 @@ exports.getTodos = async (req, res) => {
     res.status(500).json("Произошла ошибка при получении списка задач");
   }
 };
-
-
 
 exports.addTodo = async (req, res) => {
   try {
@@ -26,6 +22,7 @@ exports.addTodo = async (req, res) => {
     const todo = new Todo({
       title: title,
       userId: id,
+      date: new Date(),
     });
     await todo.save();
     res.json(todo);
@@ -88,7 +85,7 @@ exports.selectTodo = async (req, res) => {
     await todo.save();
     res.json(todo);
   } catch (error) {
-    res.sendStatus(500).json({ error: "Ошибка сервера: " + error.message });
+    res.status(500).json({ error: "Ошибка сервера: " + error.message });
   }
 };
 
@@ -104,7 +101,7 @@ exports.allSelectTodo = async (req, res) => {
     );
     res.json(updateTodo);
   } catch (error) {
-    res.sendStatus(500).json({ error: "Ошибка сервера: " + error.message });
+    res.status(500).json({ error: "Ошибка сервера: " + error.message });
   }
 };
 
@@ -117,6 +114,72 @@ exports.editTodo = async (req, res) => {
     await todo.save();
     res.json(todo);
   } catch (error) {
-    res.sendStatus(500).json({ error: "Ошибка сервера: " + error.message });
+    res.status(500).json({ error: "Ошибка сервера: " + error.message });
+  }
+};
+
+// exports.paginationTodos = async (req, res) => {
+//   const id = req.user.id;
+//   let page = Number(req.query.page);
+//   if (page === undefined) {
+//     page = 1;
+//   }
+//   const limit = 4;
+//   try {
+//     const Tusks = await Todo.find({ userId: id })
+//       .limit(limit * 1)
+//       .skip((page - 1) * limit)
+//       .exec();
+
+//     const count = (await Todo.find({ userId: id })).length;
+
+//     res.json({
+//       Tusks,
+//       totalPages: Math.ceil(count / limit),
+//       currentPage: page,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: "Ошибка сервера: " + error.message });
+//   }
+// };
+
+exports.paginationTodos = async (req, res) => {
+  const id = req.user.id;
+  const filter = String(req.query.filter);
+  let page = Number(req.query.page);
+  const limit = 4;
+  if (!page) {
+    page = 1;
+  }
+  try {
+    const options = {
+      page,
+      limit,
+      sort: { date: -1 },
+    };
+    const paginateFilter = { userId: id };
+    if (filter === "complete") {
+      paginateFilter.done = true;
+    } else if (filter === "active") {
+      paginateFilter.done = false;
+    }
+    const result = await Todo.paginate(paginateFilter, options);
+    const doneTodosCount = await Todo.countDocuments({
+      userId: id,
+      done: true,
+    });
+    const neDoneTodosCount = await Todo.countDocuments({
+      userId: id,
+      done: false,
+    });
+    const totalCount = await Todo.countDocuments({
+      userId: id,
+    });
+    result.doneTodosCount = doneTodosCount;
+    result.neDoneTodosCount = neDoneTodosCount;
+    result.totalCount = totalCount;
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Ошибка сервера: " + error.message });
   }
 };
